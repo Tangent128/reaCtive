@@ -9,7 +9,7 @@
  * Error codes & return type; all errors are negative
  * --------------------------------------------------
  */
-typedef int reaCtive_err;
+typedef int reaC_err;
 
 /* bad arguments given to a function */
 #define REAc_EINVAL -1
@@ -22,7 +22,7 @@ typedef int reaCtive_err;
  * and not waste time generating ignored items,
  * to allow running dispose() asap.
  */
-#define REAc_CANCELLED -3
+#define REAc_ECANCELLED -3
 
 /*
  * Flags
@@ -67,15 +67,15 @@ struct Observable {
 /* Public API functions.
  * --------------------------------------------------
  */
-reaCtive_err reaC_subscribe(Observable *producer, Observable *consumer, unsigned int flags);
-reaCtive_err reaC_start(Observable *consumer);
+reaC_err reaC_subscribe(Observable *producer, Observable *consumer, unsigned int flags);
+reaC_err reaC_start(Observable *consumer);
 
 /* Public API functions within an Observable's execution.
  * --------------------------------------------------
  */
-reaCtive_err reaC_emit_next(Observable *context, uintptr_t a, uintptr_t b);
-reaCtive_err reaC_emit_error(Observable *context, uintptr_t a, uintptr_t b);
-reaCtive_err reaC_emit_finish(Observable *context, uintptr_t a, uintptr_t b);
-reaCtive_err reaC_cancel(Observable *context);
+reaC_err reaC_emit_next(Observable *context, uintptr_t a, uintptr_t b);
+reaC_err reaC_emit_error(Observable *context, uintptr_t a, uintptr_t b);
+reaC_err reaC_emit_finish(Observable *context, uintptr_t a, uintptr_t b);
+reaC_err reaC_cancel(Observable *context);
 
 #endif
