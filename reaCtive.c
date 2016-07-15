@@ -34,10 +34,9 @@ static bool reaC_cleanup(Observable *context)
             context->producer->flags |= REAc_CANCELLING;
         }
         /* free resources */
-        if(context->dispose != NULL) {
-            context->dispose(context);
-        }
+        context->dispose(context);
         context->flags |= REAc_DISPOSED;
+        /* autofree observable */
         if(!(context->flags & REAc_PINNED)) {
             free(context);
         }
@@ -67,6 +66,19 @@ reaC_err reaC_cancel(Observable *context)
     return 0;
 }
 
+/* Default implementations of Observable methods */
+static void reaC_default_init(Observable *context) { /* noop */ }
+static void reaC_default_next(Observable *context, uintptr_t a, uintptr_t b) { /* no-op */ }
+static void reaC_default_error(Observable *context, uintptr_t a, uintptr_t b)
+{
+    /* reaC_emit_error(context, a, b); */
+}
+static void reaC_default_finish(Observable *context, uintptr_t a, uintptr_t b)
+{
+    /* reaC_emit_finish(context, a, b); */
+}
+static void reaC_default_dispose(Observable *context) { /* noop */ }
+
 /* Initialize the chain terminated by `consumer`;
  * at this point, all Observables in the chain may execute
  * as soon as the head of the chain produces values, either
@@ -78,12 +90,17 @@ reaC_err reaC_start(Observable *consumer)
 {
     if(reaC_validate_context(consumer) < 0) return REAc_EINVAL;
 
+    /* Patch with default functions */
+    if(consumer->init == NULL) consumer->init = reaC_default_init;
+    if(consumer->next == NULL) consumer->next = reaC_default_next;
+    if(consumer->error == NULL) consumer->error = reaC_default_error;
+    if(consumer->finish == NULL) consumer->finish = reaC_default_finish;
+    if(consumer->dispose == NULL) consumer->dispose = reaC_default_dispose;
+
     /* Note parent now in case init() ends the sequence */
     Observable *producer = consumer->producer;
 
-    if(consumer->init != NULL) {
-        consumer->init(consumer);
-    }
+    consumer->init(consumer);
     reaC_cleanup(consumer);
 
     if(producer != NULL) {
@@ -98,9 +115,7 @@ reaC_err reaC_emit_next(Observable *context, uintptr_t a, uintptr_t b)
     if(reaC_validate_context(context) < 0) return REAc_EINVAL;
 
     if(context->consumer != NULL) {
-        if(context->consumer->next) {
-            context->consumer->next(context->consumer, a, b);
-        }
+        context->consumer->next(context->consumer, a, b);
         if(reaC_cleanup(context->consumer)) {
             return REAc_ECANCELLED;
         } else {
