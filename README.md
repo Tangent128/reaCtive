@@ -1,6 +1,8 @@
 # reaCtive - a reactive programming library for C
 
-(work in progress, getting thoughts down)
+(work in progress, getting thoughts down;
+check the proofofconcept.c file for an incompleted example.
+Look into RxJS and friends for a decent explaination of reactive programming.)
 
 ## Observable lifecycle
 
@@ -13,7 +15,7 @@ structure for internal state by the Observable's creator.
 
 Any of the lifecycle functions may be `NULL` if not applicable.
 
-#### Initialization
+### Initialization
 
 `void init(Observable *context)`
 
@@ -27,7 +29,7 @@ As the consumer is initialized before the producer, `init()`
 is free to emit data items or even complete the sequence
 as part of its operation.
 
-#### Operation
+### Operation
 
 `void next(Observable *context, uintptr_t a, uintptr_t b)`
 
@@ -45,7 +47,9 @@ may also be emitted to terminate the sequence; their types should
 also be defined, but do not have to be the same type as the data
 items.
 
-If, upon emitting an item, the emission fails with a 
+If, upon emitting an item, the emission fails with a
+`REAc_ECANCELLED` error, it's probably good to short-circuit any
+processing, since nobody is listening anymore.
 
 `void error(Observable *context, uintptr_t a, uintptr_t b)`
 
@@ -56,17 +60,22 @@ the subscribed sequence with an error or completion signal,
 respectively.
 
 As such, they must emit an error or completion signal to properly
-complete their sequence. 
+complete their sequence.
 
 `error()` and `finish()` may assume that `next()` will
 not be called after they run.
 
-#### Finalization
+### Finalization
 
 `void dispose(Observable *context)`
 
-Called as the pipeline is torn down, after an error or completion
-signal has been processed by all stages.
+Called as the pipeline is torn down, after one of three events:
+* an error signal
+* a completion signal
+* a cancellation of the pipeline
 
 Should release any resources that were allocated by `init()`;
-after `dispose()` runs, the Observable must be safe to `free()`
+after `dispose()` runs, the Observable will be `free()`ed
+automatically, unless its `REAc_PINNED` flag is set.
+
+Pipeline stages are `dispose()`d in order from the consumer end to the producer end.
