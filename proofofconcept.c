@@ -43,9 +43,34 @@ static Observable *new_count_sequence(int max)
     return obj;
 }
 
+/* Demo observable, prints data items as ints */
+
+static void int_spy_next(Observable *context, uintptr_t a, uintptr_t b)
+{
+    printf("Spied values %d %d\n", a, b);
+    /* pass along unchanged */
+    reaC_emit_next(context, a, b);
+}
+static void int_spy_dispose(Observable *context)
+{
+    printf("Disposing int spy.\n");
+};
+
+static Observable *new_int_spy()
+{
+    Observable *obsv = calloc(1, sizeof(Observable));
+    obsv->next = int_spy_next;
+    obsv->dispose = int_spy_dispose;
+    return obsv;
+}
+
+/* Main */
+
 int main(int argc, char **argv)
 {
     Observable *producer = new_count_sequence(5);
-    reaC_start(producer);
+    Observable *consumer = new_int_spy();
+    reaC_subscribe(producer, consumer, 0);
+    reaC_start(consumer);
     return 0;
 }
