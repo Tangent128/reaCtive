@@ -68,9 +68,13 @@ static Observable *new_int_spy()
 
 int main(int argc, char **argv)
 {
-    Observable *producer = new_count_sequence(5);
-    Observable *consumer = new_int_spy();
-    reaC_subscribe(producer, consumer, 0);
-    reaC_start(consumer);
+    Observable *one = new_count_sequence(5);
+    Observable *two = new_int_spy();
+    Observable *three = new_int_spy();
+    Observable *four = new_int_spy();
+    reaC_subscribe(one, two, 0);
+    reaC_subscribe(two, three, 0);
+    reaC_subscribe(three, four, 0);
+    reaC_start(four);
     return 0;
 }
