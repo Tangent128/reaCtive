@@ -20,6 +20,12 @@ static void count_init(Observable *context)
         reaC_emit_next(context, i, state->max);
     }
     printf("Done counting.\n", i);
+    reaC_cancel(context);
+};
+static void count_dispose(Observable *context)
+{
+    struct count_state *state = context->userdata;
+    printf("Disposing counter with max %d.\n", state->max);
 };
 
 static Observable *new_count_sequence(int max)
@@ -30,6 +36,7 @@ static Observable *new_count_sequence(int max)
     struct count_state *state = obj + sizeof(Observable);
 
     obsv->init = &count_init;
+    obsv->dispose = &count_dispose;
     obsv->userdata = state;
     state->max = max;
 
