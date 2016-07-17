@@ -23,7 +23,7 @@ static void count_init(Observable *context)
         }
     }
     printf("Done counting.\n", i);
-    reaC_cancel(context);
+    reaC_emit_finish(context, 0, 0);
 };
 static void count_dispose(Observable *context)
 {
@@ -54,6 +54,18 @@ static void int_spy_next(Observable *context, uintptr_t a, uintptr_t b)
     /* pass along unchanged */
     reaC_emit_next(context, a, b);
 }
+static void int_spy_error(Observable *context, uintptr_t a, uintptr_t b)
+{
+    printf("Spied error %d %d\n", a, b);
+    /* pass along unchanged */
+    reaC_emit_error(context, a, b);
+}
+static void int_spy_finish(Observable *context, uintptr_t a, uintptr_t b)
+{
+    printf("Spied completion %d %d\n", a, b);
+    /* pass along unchanged */
+    reaC_emit_finish(context, a, b);
+}
 static void int_spy_dispose(Observable *context)
 {
     printf("Disposing int spy.\n");
@@ -63,6 +75,8 @@ static Observable *new_int_spy()
 {
     Observable *obsv = calloc(1, sizeof(Observable));
     obsv->next = int_spy_next;
+    obsv->error = int_spy_error;
+    obsv->finish = int_spy_finish;
     obsv->dispose = int_spy_dispose;
     return obsv;
 }
@@ -77,12 +91,14 @@ struct limit_state {
 static void limit_next(Observable *context, uintptr_t a, uintptr_t b)
 {
     struct limit_state *state = context->userdata;
+
+    /* pass along unchanged */
+    reaC_emit_next(context, a, b);
+
+    /* stop if at end */
     state->seen++;
-    if(state->seen < state->max) {
-        /* pass along unchanged */
-        reaC_emit_next(context, a, b);
-    } else {
-        reaC_cancel(context);
+    if(state->seen == state->max) {
+        reaC_emit_finish(context, 0, state->max);
     }
 };
 static void limit_dispose(Observable *context)
@@ -112,8 +128,8 @@ int main(int argc, char **argv)
 {
     Observable *one = new_count_sequence(5);
     Observable *two = new_int_spy();
-    Observable *three = new_int_spy();
-    Observable *four = new_limiter(3);
+    Observable *three = new_limiter(3);
+    Observable *four = new_int_spy();
     reaC_subscribe(one, two, 0);
     reaC_subscribe(two, three, 0);
     reaC_subscribe(three, four, 0);

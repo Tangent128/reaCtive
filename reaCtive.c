@@ -68,14 +68,14 @@ reaC_err reaC_cancel(Observable *context)
 
 /* Default implementations of Observable methods */
 static void reaC_default_init(Observable *context) { /* noop */ }
-static void reaC_default_next(Observable *context, uintptr_t a, uintptr_t b) { /* no-op */ }
+static void reaC_default_next(Observable *context, uintptr_t a, uintptr_t b) { /* noop */ }
 static void reaC_default_error(Observable *context, uintptr_t a, uintptr_t b)
 {
-    /* reaC_emit_error(context, a, b); */
+    reaC_emit_error(context, a, b);
 }
 static void reaC_default_finish(Observable *context, uintptr_t a, uintptr_t b)
 {
-    /* reaC_emit_finish(context, a, b); */
+    reaC_emit_finish(context, a, b);
 }
 static void reaC_default_dispose(Observable *context) { /* noop */ }
 
@@ -121,6 +121,38 @@ reaC_err reaC_emit_next(Observable *context, uintptr_t a, uintptr_t b)
         } else {
             return 0;
         }
+    } else {
+        return REAc_ENO_LISTENER;
+    }
+}
+
+reaC_err reaC_emit_error(Observable *context, uintptr_t a, uintptr_t b)
+{
+    if(reaC_validate_context(context) < 0) return REAc_EINVAL;
+
+    /* end of pipeline, mark self for reaping once action complete */
+    context->flags |= REAc_CANCELLING;
+
+    if(context->consumer != NULL) {
+        context->consumer->error(context->consumer, a, b);
+        reaC_cleanup(context->consumer);
+        return 0;
+    } else {
+        return REAc_ENO_LISTENER;
+    }
+}
+
+reaC_err reaC_emit_finish(Observable *context, uintptr_t a, uintptr_t b)
+{
+    if(reaC_validate_context(context) < 0) return REAc_EINVAL;
+
+    /* end of pipeline, mark self for reaping once action complete */
+    context->flags |= REAc_CANCELLING;
+
+    if(context->consumer != NULL) {
+        context->consumer->finish(context->consumer, a, b);
+        reaC_cleanup(context->consumer);
+        return 0;
     } else {
         return REAc_ENO_LISTENER;
     }
