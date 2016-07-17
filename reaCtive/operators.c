@@ -120,3 +120,36 @@ Observable *reaC_op_map_finish(Observable *producer, void *context, reaC_op_map_
 
     return obsv;
 }
+
+/* TEARDOWN: runs a function when the pipeline is being disposed,
+ * whether due to error, finishing, or cancellation. The function
+ * receives a context pointer, which is not auto-freed. However,
+ * a teardown function is a suitable place to free context pointers
+ * used, for example, by map transform functions.
+ */
+struct teardown_state {
+    void *context;
+    reaC_op_teardown_func *dispose;
+};
+static void teardown_dispose(Observable *context)
+{
+    struct teardown_state *state = context->userdata;
+
+    state->dispose(state->context);
+}
+Observable *reaC_op_teardown(Observable *producer, void *context, reaC_op_teardown_func *dispose)
+{
+    void *teardown = calloc(1, sizeof(Observable) + sizeof(struct teardown_state));
+
+    Observable *obsv = teardown;
+    struct teardown_state *state = teardown + sizeof(Observable);
+
+    obsv->dispose = teardown_dispose;
+    obsv->userdata = state;
+    state->context = context;
+    state->dispose = dispose;
+
+    reaC_subscribe(producer, obsv, 0);
+
+    return obsv;
+}
