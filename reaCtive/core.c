@@ -68,7 +68,10 @@ reaC_err reaC_cancel(Observable *context)
 
 /* Default implementations of Observable methods */
 static void reaC_default_init(Observable *context) { /* noop */ }
-static void reaC_default_next(Observable *context, uintptr_t a, uintptr_t b) { /* noop */ }
+static void reaC_default_next(Observable *context, uintptr_t a, uintptr_t b)
+{
+     reaC_emit_next(context, a, b);
+}
 static void reaC_default_error(Observable *context, uintptr_t a, uintptr_t b)
 {
     reaC_emit_error(context, a, b);
