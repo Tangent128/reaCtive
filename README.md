@@ -34,7 +34,7 @@ associated events.
 Within these event handlers, you can call `reaC_emit_next()`,
 `reaC_emit_error()`, and `reaC_emit_finish()` to pass items down
 the chain. `reaC_cancel()` can also be called to shutdown the
-pipeline without raising an error or finish signal. 
+pipeline without raising an error or finish signal.
 
 Any of the lifecycle functions may be `NULL` if not applicable.
 
