@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "reaCtive.h"
+#include "core.h"
 
 static bool reaC_validate_context(Observable *context)
 {
@@ -10,7 +10,7 @@ static bool reaC_validate_context(Observable *context)
     if(context->flags & REAc_DISPOSED) return REAc_EINVAL;
 }
 
-/* Hook two Observables together as part of a chain. 
+/* Hook two Observables together as part of a chain.
  */
 reaC_err reaC_subscribe(Observable *producer, Observable *consumer, unsigned int flags)
 {

@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "reaCtive.h"
+#include "reaCtive/core.h"
 
 /* Demo observable, generates a finite stream of ints */
 
