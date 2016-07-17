@@ -109,3 +109,47 @@ after `dispose()` runs, the Observable will be `free()`ed
 automatically, unless its `REAc_PINNED` flag is set.
 
 Pipeline stages are `dispose()`d in order from the consumer end to the producer end.
+
+# Concurrency
+
+Not thought out much yet, and definitely not implemented yet.
+
+So short answer, not thread-safe yet.
+
+Long answer:
+
+Library itself has no global state, so independent pipelines
+should be safe to access from multiple threads. Accessing one
+pipeline from multiple threads probably will be bad.
+
+Of course, having a scheduler to dispatch, say, IO events to
+relevant pipelines, using multiple working threads, would be nice.
+Which can be a problem if pipelines need to manipulate each other,
+such as a merge or flatmap operator would need to do, since they may
+end up scheduled to parallel threads.
+
+What seems sensible would be to assemble Observable chains into
+some sort of Pipeline object, which could be the subject of a
+lock that all functions to externally manipulate a pipeline
+would respect.
+
+External-manipulation functions I can think of are the current
+`cancel` function (which would take a Pipeline, not an Observable,
+then, since Observables should finish or error, not self-cancel),
+and future functions to inject next, error, & finish items into
+the start of the pipeline.
+
+Pipelines should probably be ref-counted then.
+
+The producer's `init()` function should probably be passed the
+nascent Pipeline object; since many interesting producers would
+want to register the pipeline with an asynchronous scheduler,
+they should have the ability to install `lock()` and `unlock()`
+functions onto the Pipeline.
+
+Problem: many interesting operators (like delay, and flatmap)
+would want to schedule calls into the rest of the pipeline, not
+just its head. Either give every `init()` method the ability to
+split the pipeline into sub-pipelines, or have some way to inject
+into pipeline stages with the Observable pointer, using the
+Pipeline object as a guard/lock.
