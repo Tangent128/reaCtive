@@ -3,6 +3,20 @@
 
 #include "operators.h"
 
+/* PRODUCER: creates an Observable using the given init function and userdata;
+ * the init function should emit whatever it likes and end the stream.
+ * The userdata pointer is not autofreed.
+ */
+Observable *reaC_new_producer(void *userdata, reaC_op_init_func *init)
+{
+    Observable *obsv = calloc(1, sizeof(Observable));
+
+    obsv->init = init;
+    obsv->userdata = userdata;
+
+    return obsv;
+}
+
 /* COUNT: generates an endless (until overflow) stream of ints */
 
 static void count_init(Observable *context)
@@ -18,11 +32,7 @@ static void count_init(Observable *context)
 };
 Observable *reaC_new_count()
 {
-    Observable *obsv = calloc(1, sizeof(Observable));
-
-    obsv->init = &count_init;
-
-    return obsv;
+    return reaC_new_producer(NULL, count_init);
 }
 
 /* LIMIT: stops a sequence after a number of results */

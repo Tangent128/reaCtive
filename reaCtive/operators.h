@@ -5,6 +5,13 @@
 
 #include "core.h"
 
+/* PRODUCER: creates an Observable using the given init function and userdata;
+ * the init function should emit whatever it likes and end the stream.
+ * The userdata pointer is not autofreed.
+ */
+typedef void reaC_op_init_func(Observable *context);
+Observable *reaC_new_producer(void *userdata, reaC_op_init_func *init);
+
 /* COUNT: generates an endless (until overflow) stream of ints */
 Observable *reaC_new_count();
 
