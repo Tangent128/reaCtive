@@ -35,6 +35,27 @@ Observable *reaC_new_count()
     return reaC_new_producer(NULL, count_init);
 }
 
+struct count_state {
+    ReaC_Reader reader;
+    int i;
+};
+static void count_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback) {
+    struct count_state *counter = (struct count_state*) context;
+    if(end != 0) {
+        return;
+    }
+    reaC_write(callback, 0, counter->i++, 0);
+}
+ReaC_Reader *reaC_new_count2()
+{
+    struct count_state *counter = calloc(1, sizeof(struct count_state));
+
+    counter->reader.func = count_read;
+    counter->reader.flags |= REAc_AUTOFREE;
+
+    return (ReaC_Reader *) counter;
+}
+
 /* LIMIT: stops a sequence after a number of results */
 
 struct limit_state {

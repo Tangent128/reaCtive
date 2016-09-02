@@ -14,6 +14,7 @@ Observable *reaC_new_producer(void *userdata, reaC_op_init_func *init);
 
 /* COUNT: generates an endless (until overflow) stream of ints */
 Observable *reaC_new_count();
+ReaC_Reader *reaC_new_count2();
 
 /* LIMIT: stops a sequence after a number of results */
 Observable *reaC_op_limit(Observable *producer, int max);

@@ -1,6 +1,7 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "core.h"
 
@@ -8,6 +9,7 @@ static bool reaC_validate_context(Observable *context)
 {
     if(context == NULL) return REAc_EINVAL;
     if(context->flags & REAc_DISPOSED) return REAc_EINVAL;
+    return 0;
 }
 
 /* Hook two Observables together as part of a chain.
@@ -19,6 +21,8 @@ reaC_err reaC_subscribe(Observable *producer, Observable *consumer, unsigned int
 
     producer->consumer = consumer;
     consumer->producer = producer;
+
+    return 0;
 }
 
 /* Run after any Observable init/next/error/finish call;
@@ -109,6 +113,7 @@ reaC_err reaC_start(Observable *consumer)
     if(producer != NULL) {
         return reaC_start(consumer->producer);
     }
+    return 0;
 }
 
 /* Send a data item to the subscriber.
@@ -159,4 +164,51 @@ reaC_err reaC_emit_finish(Observable *context, uintptr_t a, uintptr_t b)
     } else {
         return REAc_ENO_LISTENER;
     }
+}
+
+void reaC_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback)
+{
+    // auto-free simple filters/sources
+    if(end && (context->flags & REAc_AUTOFREE)) {
+        context->func(context, end, callback);
+        free(context);
+    } else {
+        // on -O2, this should optimize to jump
+        context->func(context, end, callback);
+    }
+}
+
+void reaC_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t b)
+{
+    // on -O2, this should optimize to jump
+    context->func(context, end, a, b);
+}
+
+struct drain_writer {
+    ReaC_Writer writer;
+    ReaC_Reader *source;
+};
+static void drain_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t b)
+{
+    (void)(a + b);
+    struct drain_writer *state = (struct drain_writer *) context;
+
+    if(end == REAc_OK) {
+        // on -O2, this should optimize to jump
+        reaC_read(state->source, end, context);
+    } else {
+        // if stream's over, free reader & sink
+        reaC_read(state->source, end, NULL);
+        free(context);
+    }
+
+}
+void reaC_drain (ReaC_Reader *source)
+{
+    struct drain_writer *state = calloc(1, sizeof(struct drain_writer));
+
+    state->writer.func = drain_write;
+    state->source = source;
+
+    reaC_read(source, 0, (ReaC_Writer *) state);
 }
