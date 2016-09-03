@@ -152,6 +152,58 @@ Observable *reaC_op_map_finish(Observable *producer, void *context, reaC_op_map_
     return obsv;
 }
 
+struct map_writer {
+    ReaC_Writer writer;
+
+    ReaC_Writer *callback;
+
+    void *context;
+    reaC_op_map_func *transform;
+
+    uintptr_t a;
+    uintptr_t b;
+};
+struct map_reader {
+    ReaC_Reader reader;
+
+    ReaC_Reader *source;
+    struct map_writer writer;
+};
+static void map_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t b) {
+    struct map_writer *mapper = (struct map_writer*) context;
+
+    if(end == REAc_OK) {
+        /* Important: GCC won't tail call if any pointers to the stack
+         * or arguments get passed to functions; "launder" a & b through
+         * the context so the transform function can mutate them. */
+        mapper->a = a;
+        mapper->b = b;
+        mapper->transform(mapper->context, &mapper->a, &mapper->b);
+    }
+
+    reaC_write(mapper->callback, end, mapper->a, mapper->b);
+}
+static void map_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback) {
+    struct map_reader *mapper = (struct map_reader*) context;
+    mapper->writer.callback = callback;
+    reaC_read(mapper->source, end, (ReaC_Writer *) &mapper->writer);
+}
+ReaC_Reader *reaC_op_map2(ReaC_Reader *source, void *context, reaC_op_map_func *transform)
+{
+    struct map_reader *mapper = calloc(1, sizeof(struct map_reader));
+
+    mapper->reader.func = map_read;
+    mapper->reader.flags |= REAc_AUTOFREE;
+
+    mapper->source = source;
+
+    mapper->writer.writer.func = map_write;
+    mapper->writer.context = context;
+    mapper->writer.transform = transform;
+
+    return (ReaC_Reader *) mapper;
+}
+
 /* TEARDOWN: runs a function when the pipeline is being disposed,
  * whether due to error, finishing, or cancellation. The function
  * receives a context pointer, which is not auto-freed. However,

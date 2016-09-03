@@ -28,6 +28,7 @@ typedef void reaC_op_map_func(void *context, uintptr_t *a, uintptr_t *b);
 Observable *reaC_op_map(Observable *producer, void *context, reaC_op_map_func *transform);
 Observable *reaC_op_map_error(Observable *producer, void *context, reaC_op_map_func *transform);
 Observable *reaC_op_map_finish(Observable *producer, void *context, reaC_op_map_func *transform);
+ReaC_Reader *reaC_op_map2(ReaC_Reader *source, void *context, reaC_op_map_func *transform);
 
 /* TEARDOWN: runs a function when the pipeline is being disposed,
  * whether due to error, finishing, or cancellation. The function

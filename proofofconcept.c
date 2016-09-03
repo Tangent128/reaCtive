@@ -29,8 +29,9 @@ int main(int argc, char **argv)
     chain = reaC_op_map_finish(chain, "Finish2 %d\n", map_printf);
     reaC_start(chain);
 
-    ReaC_Reader *source = reaC_new_count2();
-    reaC_drain(source);
+    ReaC_Reader *chain2 = reaC_new_count2();
+    chain2 = reaC_op_map2(chain2, "Observe %lu %lu\n", map_printf);
+    reaC_drain(chain2);
 
     return 0;
 }
