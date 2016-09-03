@@ -31,6 +31,8 @@ int main(int argc, char **argv)
 
     ReaC_Reader *chain2 = reaC_new_count2();
     chain2 = reaC_op_map2(chain2, "Observe %lu %lu\n", map_printf);
+    chain2 = reaC_op_take2(chain2, 3);
+    chain2 = reaC_op_map2(chain2, "Observe2 %lu %lu\n", map_printf);
     reaC_drain(chain2);
 
     return 0;

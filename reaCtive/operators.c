@@ -91,6 +91,48 @@ Observable *reaC_op_limit(Observable *producer, int max)
     return obsv;
 }
 
+struct take_writer {
+    ReaC_Writer writer;
+
+    ReaC_Writer *callback;
+};
+struct take_reader {
+    ReaC_Reader reader;
+
+    ReaC_Reader *source;
+    struct take_writer writer;
+
+    uintmax_t seen;
+    uintmax_t max;
+};
+static void take_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t b) {
+    struct take_writer *taker = (struct take_writer*) context;
+    reaC_write(taker->callback, end, a, b);
+}
+static void take_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback) {
+    struct take_reader *taker = (struct take_reader*) context;
+    if((end == REAc_OK) && (taker->seen++ >= taker->max)) {
+        reaC_write(callback, REAc_DONE, 0, 0);
+    } else {
+        taker->writer.callback = callback;
+        reaC_read(taker->source, end, (ReaC_Writer *) &taker->writer);
+    }
+}
+ReaC_Reader *reaC_op_take2(ReaC_Reader *source, uintmax_t max)
+{
+    struct take_reader *taker = calloc(1, sizeof(struct take_reader));
+
+    taker->reader.func = take_read;
+    taker->reader.flags |= REAc_AUTOFREE;
+
+    taker->source = source;
+
+    taker->writer.writer.func = take_write;
+    taker->max = max;
+
+    return (ReaC_Reader *) taker;
+}
+
 /* MAP: allows applying a transform function to each element in a
  * stream; a & b are passed by reference, to allow modifying them.
  * The transform function may be given a context pointer; be advised

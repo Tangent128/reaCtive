@@ -18,6 +18,7 @@ ReaC_Reader *reaC_new_count2();
 
 /* LIMIT: stops a sequence after a number of results */
 Observable *reaC_op_limit(Observable *producer, int max);
+ReaC_Reader *reaC_op_take2(ReaC_Reader *source, uintmax_t max);
 
 /* MAP: allows applying a transform function to each element in a
  * stream; a & b are passed by reference, to allow modifying them.
