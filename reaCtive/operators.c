@@ -246,35 +246,101 @@ ReaC_Reader *reaC_op_map2(ReaC_Reader *source, void *context, reaC_op_map_func *
     return (ReaC_Reader *) mapper;
 }
 
-/* TEARDOWN: runs a function when the pipeline is being disposed,
- * whether due to error, finishing, or cancellation. The function
+/* ON_END: runs a function when a termination code comes from upstream.
+ * Possibly useful for error handling, but does not run on cancel.
+ * The handler function may be given a context pointer; be advised
+ * that this context pointer is not auto-freed.
+ */
+struct on_end_writer {
+    ReaC_Writer writer;
+
+    ReaC_Writer *callback;
+
+    void *context;
+    reaC_op_on_end_func *handler;
+};
+struct on_end_reader {
+    ReaC_Reader reader;
+
+    ReaC_Reader *source;
+    struct on_end_writer writer;
+};
+static void on_end_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t b) {
+    struct on_end_writer *state = (struct on_end_writer*) context;
+
+    if(end != REAc_OK) {
+        state->handler(state->context, end, a, b);
+    }
+
+    reaC_write(state->callback, end, a, b);
+}
+static void on_end_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback) {
+    struct on_end_reader *mapper = (struct on_end_reader*) context;
+    mapper->writer.callback = callback;
+    reaC_read(mapper->source, end, (ReaC_Writer *) &mapper->writer);
+}
+ReaC_Reader *reaC_op_on_end2(ReaC_Reader *source, void *context, reaC_op_on_end_func *handler)
+{
+    struct on_end_reader *state = calloc(1, sizeof(struct on_end_reader));
+
+    state->reader.func = on_end_read;
+    state->reader.flags |= REAc_AUTOFREE;
+
+    state->source = source;
+
+    state->writer.writer.func = on_end_write;
+    state->writer.context = context;
+    state->writer.handler = handler;
+
+    return (ReaC_Reader *) state;
+}
+
+/* CLEANUP: runs a function upon being canceled. The function
  * receives a context pointer, which is not auto-freed. However,
- * a teardown function is a suitable place to free context pointers
+ * a cleanup function is a suitable place to free context pointers
  * used, for example, by map transform functions.
  */
-struct teardown_state {
-    void *context;
-    reaC_op_teardown_func *dispose;
+struct cleanup_writer {
+    ReaC_Writer writer;
+
+    ReaC_Writer *callback;
 };
-static void teardown_dispose(Observable *context)
-{
-    struct teardown_state *state = context->userdata;
+struct cleanup_reader {
+    ReaC_Reader reader;
 
-    state->dispose(state->context);
+    ReaC_Reader *source;
+    struct cleanup_writer writer;
+
+    void *context;
+    reaC_op_cleanup_func *handler;
+};
+static void cleanup_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t b) {
+    struct cleanup_writer *state = (struct cleanup_writer*) context;
+    reaC_write(state->callback, end, a, b);
 }
-Observable *reaC_op_teardown(Observable *producer, void *context, reaC_op_teardown_func *dispose)
+static void cleanup_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback) {
+    struct cleanup_reader *state = (struct cleanup_reader*) context;
+
+    if(end == REAc_OK) {
+        state->writer.callback = callback;
+        reaC_read(state->source, end, (ReaC_Writer *) &state->writer);
+    } else {
+        state->handler(state->context, end);
+        reaC_read(state->source, end, (ReaC_Writer *) &state->writer);
+    }
+}
+ReaC_Reader *reaC_op_cleanup2(ReaC_Reader *source, void *context, reaC_op_cleanup_func *handler)
 {
-    void *teardown = calloc(1, sizeof(Observable) + sizeof(struct teardown_state));
+    struct cleanup_reader *state = calloc(1, sizeof(struct cleanup_reader));
 
-    Observable *obsv = teardown;
-    struct teardown_state *state = teardown + sizeof(Observable);
+    state->reader.func = cleanup_read;
+    state->reader.flags |= REAc_AUTOFREE;
 
-    obsv->dispose = teardown_dispose;
-    obsv->userdata = state;
+    state->source = source;
     state->context = context;
-    state->dispose = dispose;
+    state->handler = handler;
 
-    reaC_subscribe(producer, obsv, 0);
+    state->writer.writer.func = cleanup_write;
 
-    return obsv;
+    return (ReaC_Reader *) state;
 }

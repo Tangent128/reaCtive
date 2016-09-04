@@ -31,13 +31,20 @@ Observable *reaC_op_map_error(Observable *producer, void *context, reaC_op_map_f
 Observable *reaC_op_map_finish(Observable *producer, void *context, reaC_op_map_func *transform);
 ReaC_Reader *reaC_op_map2(ReaC_Reader *source, void *context, reaC_op_map_func *transform);
 
-/* TEARDOWN: runs a function when the pipeline is being disposed,
- * whether due to error, finishing, or cancellation. The function
+/* ON_END: runs a function when a termination code comes from upstream.
+ * Possibly useful for error detection, but does not run on cancel.
+ * The handler function may be given a context pointer; be advised
+ * that this context pointer is not auto-freed.
+ */
+typedef void reaC_op_on_end_func(void *context, reaC_err end, uintptr_t a, uintptr_t b);
+ReaC_Reader *reaC_op_on_end2(ReaC_Reader *source, void *context, reaC_op_on_end_func *handler);
+
+/* CLEANUP: runs a function upon being canceled. The function
  * receives a context pointer, which is not auto-freed. However,
- * a teardown function is a suitable place to free context pointers
+ * a cleanup function is a suitable place to free context pointers
  * used, for example, by map transform functions.
  */
-typedef void reaC_op_teardown_func(void *context);
-Observable *reaC_op_teardown(Observable *producer, void *context, reaC_op_teardown_func *dispose);
+typedef void reaC_op_cleanup_func(void *context, reaC_err end);
+ReaC_Reader *reaC_op_cleanup2(ReaC_Reader *source, void *context, reaC_op_cleanup_func *handler);
 
 #endif
