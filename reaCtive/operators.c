@@ -9,7 +9,8 @@ struct count_state {
     ReaC_Reader reader;
     int i;
 };
-static void count_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback) {
+static void count_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback, uintptr_t control) {
+    (void)(control);
     struct count_state *counter = (struct count_state*) context;
     if(end != 0) {
         return;
@@ -46,13 +47,14 @@ static void take_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_
     struct take_writer *taker = (struct take_writer*) context;
     reaC_write(taker->callback, end, a, b);
 }
-static void take_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback) {
+static void take_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback, uintptr_t control) {
+    (void)(control);
     struct take_reader *taker = (struct take_reader*) context;
     if((end == REAc_OK) && (taker->seen++ >= taker->max)) {
         reaC_write(callback, REAc_DONE, 0, 0);
     } else {
         taker->writer.callback = callback;
-        reaC_read(taker->source, end, (ReaC_Writer *) &taker->writer);
+        reaC_read(taker->source, end, (ReaC_Writer *) &taker->writer, 0);
     }
 }
 ReaC_Reader *reaC_op_take2(ReaC_Reader *source, uintmax_t max)
@@ -107,10 +109,11 @@ static void map_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t
 
     reaC_write(mapper->callback, end, mapper->a, mapper->b);
 }
-static void map_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback) {
+static void map_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback, uintptr_t control) {
+    (void)(control);
     struct map_reader *mapper = (struct map_reader*) context;
     mapper->writer.callback = callback;
-    reaC_read(mapper->source, end, (ReaC_Writer *) &mapper->writer);
+    reaC_read(mapper->source, end, (ReaC_Writer *) &mapper->writer, 0);
 }
 ReaC_Reader *reaC_op_map2(ReaC_Reader *source, void *context, reaC_op_map_func *transform)
 {
@@ -156,10 +159,11 @@ static void on_end_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintpt
 
     reaC_write(state->callback, end, a, b);
 }
-static void on_end_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback) {
+static void on_end_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback, uintptr_t control) {
+    (void)(control);
     struct on_end_reader *mapper = (struct on_end_reader*) context;
     mapper->writer.callback = callback;
-    reaC_read(mapper->source, end, (ReaC_Writer *) &mapper->writer);
+    reaC_read(mapper->source, end, (ReaC_Writer *) &mapper->writer, 0);
 }
 ReaC_Reader *reaC_op_on_end2(ReaC_Reader *source, void *context, reaC_op_on_end_func *handler)
 {
@@ -200,15 +204,16 @@ static void cleanup_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintp
     struct cleanup_writer *state = (struct cleanup_writer*) context;
     reaC_write(state->callback, end, a, b);
 }
-static void cleanup_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback) {
+static void cleanup_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback, uintptr_t control) {
+    (void)(control);
     struct cleanup_reader *state = (struct cleanup_reader*) context;
 
     if(end == REAc_OK) {
         state->writer.callback = callback;
-        reaC_read(state->source, end, (ReaC_Writer *) &state->writer);
+        reaC_read(state->source, end, (ReaC_Writer *) &state->writer, 0);
     } else {
         state->handler(state->context, end);
-        reaC_read(state->source, end, (ReaC_Writer *) &state->writer);
+        reaC_read(state->source, end, (ReaC_Writer *) &state->writer, 0);
     }
 }
 ReaC_Reader *reaC_op_cleanup2(ReaC_Reader *source, void *context, reaC_op_cleanup_func *handler)

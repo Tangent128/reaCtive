@@ -34,7 +34,7 @@ typedef struct ReaC_Writer ReaC_Writer;
 typedef struct ReaC_Reader ReaC_Reader;
 
 typedef void ReaC_Writer_Func(ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t b);
-typedef void ReaC_Reader_Func(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback);
+typedef void ReaC_Reader_Func(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback, uintptr_t control);
 
 struct ReaC_Writer {
     ReaC_Writer_Func *func;
@@ -57,6 +57,10 @@ struct ReaC_Writer {
  * - any queued Writer will never be called
  * - all resources used by the Reader, including wrapped Readers
  *   and the Reader's struct itself, shall be freed.
+ *
+ * A Reader function may also take a control argument; its
+ * interpretation is specific to specific Reader implementations.
+ * Zero must be a sane default value for control in any case.
  * --------------------------------------------------
  */
 struct ReaC_Reader {
@@ -69,7 +73,7 @@ struct ReaC_Reader {
 /* Public API functions.
  * --------------------------------------------------
  */
-void reaC_read  (ReaC_Reader *context, reaC_err end, ReaC_Writer *callback);
+void reaC_read  (ReaC_Reader *context, reaC_err end, ReaC_Writer *callback, uintptr_t control);
 void reaC_write (ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t b);
 
 void reaC_drain (ReaC_Reader *source);
