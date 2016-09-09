@@ -1,4 +1,7 @@
 # Configuration
+CONFIG ?= config.mk
+
+-include $(CONFIG)
 
 BUILD ?= ./build
 
