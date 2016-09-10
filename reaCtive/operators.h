@@ -8,6 +8,9 @@
 /* COUNT: generates an endless (until overflow) stream of ints */
 ReaC_Reader *reaC_new_count2();
 
+/* CONSTANT: generates an endless stream of a specific value */
+ReaC_Reader *reaC_constant_source(uintptr_t a, uintptr_t b);
+
 /* TAKE: stops a sequence after a number of results */
 ReaC_Reader *reaC_op_take2(ReaC_Reader *source, uintmax_t max);
 

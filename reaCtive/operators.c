@@ -27,6 +27,34 @@ ReaC_Reader *reaC_new_count2()
     return (ReaC_Reader *) counter;
 }
 
+/* CONSTANT: generates an endless stream of a specific value */
+
+struct constant_state {
+    ReaC_Reader reader;
+    uintptr_t a;
+    uintptr_t b;
+};
+static void constant_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback, uintptr_t control) {
+    (void)(control);
+    struct constant_state *state = (struct constant_state*) context;
+    if(end) {
+        return;
+    }
+    reaC_write(callback, 0, state->a, state->b);
+}
+ReaC_Reader *reaC_constant_source(uintptr_t a, uintptr_t b)
+{
+    struct constant_state *state = calloc(1, sizeof(struct constant_state));
+
+    state->reader.func = constant_read;
+    state->reader.flags |= REAc_AUTOFREE;
+
+    state->a = a;
+    state->b = b;
+
+    return (ReaC_Reader *) state;
+}
+
 /* TAKE: stops a sequence after a number of results */
 
 struct take_writer {
