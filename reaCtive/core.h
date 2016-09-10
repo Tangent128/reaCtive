@@ -28,7 +28,9 @@ typedef int reaC_err;
  */
 #define REAc_AUTOFREE 0x02
 
-/* TAKE 2: pull_streams */
+/* Pull Streams.
+ * --------------------------------------------------
+ */
 
 typedef struct ReaC_Writer ReaC_Writer;
 typedef struct ReaC_Reader ReaC_Reader;
@@ -66,9 +68,8 @@ struct ReaC_Writer {
 struct ReaC_Reader {
     ReaC_Reader_Func *func;
 
-    unsigned int flags;
+    uintptr_t flags;
 };
-
 
 /* Public API functions.
  * --------------------------------------------------
@@ -77,5 +78,28 @@ void reaC_read  (ReaC_Reader *context, reaC_err end, ReaC_Writer *callback, uint
 void reaC_write (ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t b);
 
 void reaC_drain (ReaC_Reader *source);
+
+/* Streamline the common "filter" case
+ * --------------------------------------------------
+ */
+
+typedef struct ReaC_Filter ReaC_Filter;
+typedef struct ReaC_Filter_Reader ReaC_Filter_Reader;
+
+typedef void ReaC_Filter_Destroy_Func(ReaC_Filter *context);
+
+struct ReaC_Filter {
+    ReaC_Writer writer;
+    ReaC_Writer *output;
+    ReaC_Filter_Destroy_Func *destroy;
+};
+
+struct ReaC_Filter_Reader {
+    ReaC_Reader reader;
+    ReaC_Reader *input;
+    ReaC_Filter filter[];
+};
+
+ReaC_Filter_Reader *reaC_new_filter (ReaC_Reader *source, ReaC_Writer_Func *filter, size_t size, ReaC_Filter_Destroy_Func *destroy);
 
 #endif
