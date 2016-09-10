@@ -78,10 +78,8 @@ ReaC_Reader *reaC_op_take2(ReaC_Reader *source, uintmax_t max)
  * that this context pointer is not auto-freed.
  */
 
-struct map_writer {
-    ReaC_Writer writer;
-
-    ReaC_Writer *callback;
+struct map_filter {
+    ReaC_Filter filter;
 
     void *context;
     reaC_op_map_func *transform;
@@ -89,14 +87,8 @@ struct map_writer {
     uintptr_t a;
     uintptr_t b;
 };
-struct map_reader {
-    ReaC_Reader reader;
-
-    ReaC_Reader *source;
-    struct map_writer writer;
-};
 static void map_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t b) {
-    struct map_writer *mapper = (struct map_writer*) context;
+    struct map_filter *mapper = (struct map_filter*) context;
 
     if(end == REAc_OK) {
         /* Important: GCC won't tail call if any pointers to the stack
@@ -107,28 +99,18 @@ static void map_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t
         mapper->transform(mapper->context, &mapper->a, &mapper->b);
     }
 
-    reaC_write(mapper->callback, end, mapper->a, mapper->b);
-}
-static void map_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback, uintptr_t control) {
-    (void)(control);
-    struct map_reader *mapper = (struct map_reader*) context;
-    mapper->writer.callback = callback;
-    reaC_read(mapper->source, end, (ReaC_Writer *) &mapper->writer, 0);
+    reaC_write(mapper->filter.output, end, mapper->a, mapper->b);
 }
 ReaC_Reader *reaC_op_map2(ReaC_Reader *source, void *context, reaC_op_map_func *transform)
 {
-    struct map_reader *mapper = calloc(1, sizeof(struct map_reader));
+    ReaC_Filter_Reader *reader = reaC_new_filter(
+        source, map_write, sizeof(struct map_filter), NULL);
 
-    mapper->reader.func = map_read;
-    mapper->reader.flags |= REAc_AUTOFREE;
+    struct map_filter *mapper = (struct map_filter *) reader->filter;
+    mapper->context = context;
+    mapper->transform = transform;
 
-    mapper->source = source;
-
-    mapper->writer.writer.func = map_write;
-    mapper->writer.context = context;
-    mapper->writer.transform = transform;
-
-    return (ReaC_Reader *) mapper;
+    return (ReaC_Reader *) reader;
 }
 
 /* ON_END: runs a function when a termination code comes from upstream.
