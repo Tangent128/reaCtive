@@ -140,7 +140,7 @@ ReaC_Reader *reaC_op_on_end2(ReaC_Reader *source, void *context, reaC_op_on_end_
 
     struct on_end_filter *mapper = (struct on_end_filter *) reader->filter;
     mapper->context = context;
-    mapper->transform = transform;
+    mapper->handler = handler;
 
     return (ReaC_Reader *) reader;
 }
