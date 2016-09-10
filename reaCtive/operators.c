@@ -118,49 +118,31 @@ ReaC_Reader *reaC_op_map2(ReaC_Reader *source, void *context, reaC_op_map_func *
  * The handler function may be given a context pointer; be advised
  * that this context pointer is not auto-freed.
  */
-struct on_end_writer {
-    ReaC_Writer writer;
-
-    ReaC_Writer *callback;
+struct on_end_filter {
+    ReaC_Filter filter;
 
     void *context;
     reaC_op_on_end_func *handler;
 };
-struct on_end_reader {
-    ReaC_Reader reader;
-
-    ReaC_Reader *source;
-    struct on_end_writer writer;
-};
 static void on_end_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t b) {
-    struct on_end_writer *state = (struct on_end_writer*) context;
+    struct on_end_filter *state = (struct on_end_filter*) context;
 
     if(end != REAc_OK) {
         state->handler(state->context, end, a, b);
     }
 
-    reaC_write(state->callback, end, a, b);
-}
-static void on_end_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback, uintptr_t control) {
-    (void)(control);
-    struct on_end_reader *mapper = (struct on_end_reader*) context;
-    mapper->writer.callback = callback;
-    reaC_read(mapper->source, end, (ReaC_Writer *) &mapper->writer, 0);
+    reaC_write(state->filter.output, end, a, b);
 }
 ReaC_Reader *reaC_op_on_end2(ReaC_Reader *source, void *context, reaC_op_on_end_func *handler)
 {
-    struct on_end_reader *state = calloc(1, sizeof(struct on_end_reader));
+    ReaC_Filter_Reader *reader = reaC_new_filter(
+        source, on_end_write, sizeof(struct on_end_filter), NULL);
 
-    state->reader.func = on_end_read;
-    state->reader.flags |= REAc_AUTOFREE;
+    struct on_end_filter *mapper = (struct on_end_filter *) reader->filter;
+    mapper->context = context;
+    mapper->transform = transform;
 
-    state->source = source;
-
-    state->writer.writer.func = on_end_write;
-    state->writer.context = context;
-    state->writer.handler = handler;
-
-    return (ReaC_Reader *) state;
+    return (ReaC_Reader *) reader;
 }
 
 /* CLEANUP: runs a function upon being canceled. The function
