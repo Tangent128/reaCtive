@@ -194,8 +194,8 @@ static void cleanup_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callba
         state->writer.callback = callback;
         reaC_read(state->source, end, (ReaC_Writer *) &state->writer, 0);
     } else {
-        state->handler(state->context, end);
         reaC_read(state->source, end, (ReaC_Writer *) &state->writer, 0);
+        state->handler(state->context, end);
     }
 }
 ReaC_Reader *reaC_op_cleanup2(ReaC_Reader *source, void *context, reaC_op_cleanup_func *handler)
