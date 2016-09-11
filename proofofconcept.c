@@ -17,11 +17,11 @@ static void map_print_cstr(void *context, uintptr_t *address, uintptr_t *count)
 int main(int argc, char **argv)
 {
     (void)(argc + argv);
-    ReaC_Reader *chain2 = reaC_constant_source(
+    ReaC_Reader *chain = reaC_constant_source(
         (uintptr_t) testString, sizeof(testString) - 1);
-    chain2 = reaC_op_take2(chain2, 1);
-    chain2 = reaC_op_map2(chain2, NULL, map_print_cstr);
-    reaC_drain(chain2);
+    chain = reaC_take(chain, 1);
+    chain = reaC_map(chain, NULL, map_print_cstr);
+    reaC_drain(chain);
 
     return 0;
 }

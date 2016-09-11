@@ -17,7 +17,7 @@ static void count_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback
     }
     reaC_write(callback, 0, counter->i++, 0);
 }
-ReaC_Reader *reaC_new_count2()
+ReaC_Reader *reaC_count_source()
 {
     struct count_state *counter = calloc(1, sizeof(struct count_state));
 
@@ -85,7 +85,7 @@ static void take_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callback,
         reaC_read(taker->source, end, (ReaC_Writer *) &taker->writer, 0);
     }
 }
-ReaC_Reader *reaC_op_take2(ReaC_Reader *source, uintmax_t max)
+ReaC_Reader *reaC_take(ReaC_Reader *source, uintmax_t max)
 {
     struct take_reader *taker = calloc(1, sizeof(struct take_reader));
 
@@ -110,7 +110,7 @@ struct map_filter {
     ReaC_Filter filter;
 
     void *context;
-    reaC_op_map_func *transform;
+    reaC_map_func *transform;
 
     uintptr_t a;
     uintptr_t b;
@@ -129,7 +129,7 @@ static void map_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t
 
     reaC_write(mapper->filter.output, end, mapper->a, mapper->b);
 }
-ReaC_Reader *reaC_op_map2(ReaC_Reader *source, void *context, reaC_op_map_func *transform)
+ReaC_Reader *reaC_map(ReaC_Reader *source, void *context, reaC_map_func *transform)
 {
     ReaC_Filter_Reader *reader = reaC_new_filter(
         source, map_write, sizeof(struct map_filter), NULL);
@@ -141,19 +141,19 @@ ReaC_Reader *reaC_op_map2(ReaC_Reader *source, void *context, reaC_op_map_func *
     return (ReaC_Reader *) reader;
 }
 
-/* ON_END: runs a function when a termination code comes from upstream.
+/* ON_EOF: runs a function when a termination code comes from upstream.
  * Possibly useful for error handling, but does not run on cancel.
  * The handler function may be given a context pointer; be advised
  * that this context pointer is not auto-freed.
  */
-struct on_end_filter {
+struct on_eof_filter {
     ReaC_Filter filter;
 
     void *context;
-    reaC_op_on_end_func *handler;
+    reaC_on_eof_func *handler;
 };
-static void on_end_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t b) {
-    struct on_end_filter *state = (struct on_end_filter*) context;
+static void on_eof_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t b) {
+    struct on_eof_filter *state = (struct on_eof_filter*) context;
 
     if(end != REAc_OK) {
         state->handler(state->context, end, a, b);
@@ -161,19 +161,19 @@ static void on_end_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintpt
 
     reaC_write(state->filter.output, end, a, b);
 }
-ReaC_Reader *reaC_op_on_end2(ReaC_Reader *source, void *context, reaC_op_on_end_func *handler)
+ReaC_Reader *reaC_on_eof(ReaC_Reader *source, void *context, reaC_on_eof_func *handler)
 {
     ReaC_Filter_Reader *reader = reaC_new_filter(
-        source, on_end_write, sizeof(struct on_end_filter), NULL);
+        source, on_eof_write, sizeof(struct on_eof_filter), NULL);
 
-    struct on_end_filter *mapper = (struct on_end_filter *) reader->filter;
-    mapper->context = context;
-    mapper->handler = handler;
+    struct on_eof_filter *state = (struct on_eof_filter *) reader->filter;
+    state->context = context;
+    state->handler = handler;
 
     return (ReaC_Reader *) reader;
 }
 
-/* CLEANUP: runs a function upon being canceled. The function
+/* ON_CLEANUP: runs a function upon being canceled. The function
  * receives a context pointer, which is not auto-freed. However,
  * a cleanup function is a suitable place to free context pointers
  * used, for example, by map transform functions.
@@ -190,7 +190,7 @@ struct cleanup_reader {
     struct cleanup_writer writer;
 
     void *context;
-    reaC_op_cleanup_func *handler;
+    reaC_on_cleanup_func *handler;
 };
 static void cleanup_write(ReaC_Writer *context, reaC_err end, uintptr_t a, uintptr_t b) {
     struct cleanup_writer *state = (struct cleanup_writer*) context;
@@ -208,7 +208,7 @@ static void cleanup_read(ReaC_Reader *context, reaC_err end, ReaC_Writer *callba
         state->handler(state->context, end);
     }
 }
-ReaC_Reader *reaC_op_cleanup2(ReaC_Reader *source, void *context, reaC_op_cleanup_func *handler)
+ReaC_Reader *reaC_on_cleanup(ReaC_Reader *source, void *context, reaC_on_cleanup_func *handler)
 {
     struct cleanup_reader *state = calloc(1, sizeof(struct cleanup_reader));
 
